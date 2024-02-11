@@ -67,9 +67,9 @@ class BTreeNode:
         return str(self.value)
 
 class BTree:
-    def __init__(self, height):
-        self.btree_start_node = self.make_btree(height)
-        print(self.btree_start_node)
+    # def __init__(self, height):
+    #     self.btree_start_node = self.make_btree(height)
+    #     # print(self.btree_start_node)
     
     def print_node(self, node):
         print(f"{node}")
@@ -80,51 +80,74 @@ class BTree:
             print("===========")
             
 
-    def make_node(self, value, height=0):
-        """
-            15
-        7         14
-        3 6      10  13
-        1 2 4 5   8 9  11 12
-                        
-        """
+    def make_node(self, value, parent_node=None, height=0):        
         parent = BTreeNode(value)
+        parent.parent = parent_node
         if height == 1:
              return parent
         right = value-1
         left = right - ((pow(2, height-1)) -1)
-        parent.left = self.make_node(left, height=height-1)
-        parent.right = self.make_node(value-1, height=height-1)
+        
+        parent.left = self.make_node(left, parent_node=parent, height=height-1)
+        parent.right = self.make_node(value-1, parent_node=parent, height=height-1)
         return parent
+        
+    def make_and_search_node(self, converter, value, parent_node=None, height=0):
+        parent = BTreeNode(value)
+        parent.parent = parent_node
+        if parent.value == converter:
+            if parent.parent:
+                return parent.parent.value
+            else:
+                return -1
+        else:
+            right = value-1
+            left = right - ((pow(2, height-1)) -1)
+            
+            if left >= converter:
+                return self.make_and_search_node(converter, left, parent_node=parent, height=height-1)
+            elif converter <= right:
+                return self.make_and_search_node(converter, right, parent_node=parent, height=height-1)
 
-    def search_node(self, value, converters, height=0):
-        parent = BTreeNode(value)
-        if height == 1:
-             return parent
-        right = value-1
-        left = right - ((pow(2, height-1)) -1)
-        parent.left = self.make_node(left, height=height-1)
-        parent.right = self.make_node(value-1, height=height-1)
-        return parent
-    
+
+
+    def search_node(self, converter, parent):
+        if parent.value == converter:
+            if parent.parent:
+                return parent.parent.value
+            else:
+                return -1
+        else:
+            if parent.left.value >= converter:
+                return self.search_node(converter, parent.left)
+            elif converter <= parent.right.value:
+                return self.search_node(converter, parent.right)
+            else:
+                return -1
+                         
 
     def make_btree(self, height):
         value = pow(2, height)-1
         start_node = self.make_node(value, height=height)
-        self.print_node(start_node)
         return start_node
 
     
 
 
 @algorithm_performance_decorator
-def solution(h, l):
-    btree = BTree(h)
+def solution(h, q):
+    answers = []
+    btree = BTree()
+    for converter in q:
+        answers.append(btree.make_and_search_node(converter, pow(2, h)-1, height=h))
+    return answers
 
 
 
 if __name__ == "__main__":
-    solution(4, [7, 3, 5, 1])
+    assert solution(4, [7, 3, 5, 1]) == [15, 7, 6, 3]
+    assert solution(100, [19, 14, 28]) == [21,15,29]
+    assert solution(3, [7, 3, 5, 1]) == [-1,7,6,3]
 
 
 
