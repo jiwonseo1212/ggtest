@@ -92,10 +92,21 @@ class BTree:
         if height == 1:
              return parent
         right = value-1
-        left = right - (pow(2, height-1)) -1 
+        left = right - ((pow(2, height-1)) -1)
         parent.left = self.make_node(left, height=height-1)
         parent.right = self.make_node(value-1, height=height-1)
         return parent
+
+    def search_node(self, value, converters, height=0):
+        parent = BTreeNode(value)
+        if height == 1:
+             return parent
+        right = value-1
+        left = right - ((pow(2, height-1)) -1)
+        parent.left = self.make_node(left, height=height-1)
+        parent.right = self.make_node(value-1, height=height-1)
+        return parent
+    
 
     def make_btree(self, height):
         value = pow(2, height)-1
