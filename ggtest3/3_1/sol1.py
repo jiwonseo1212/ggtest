@@ -1,6 +1,13 @@
-import math
+from functools import reduce
 from fractions import Fraction
-
+def gcd(a, b):
+    while b:
+        a, b = b, a % b
+    return a
+def _lcm(a, b):
+    return a * b // gcd(a, b)
+def lcm(*args):
+    return reduce(_lcm, args)
 def matmul_fraction(A, B):
     result = [[Fraction(0) for _ in range(len(B[0]))] for _ in range(len(A))]
     for i in range(len(A)):
@@ -8,67 +15,55 @@ def matmul_fraction(A, B):
             for k in range(len(B)):
                 result[i][j] += A[i][k] * B[k][j]
     return result
-
-def test_make_stable_mat(m):
-    """
-    [
-    [0,1,0,0,0,1], # s0, the initial state, goes to s1 and s5 with equal probability
-    [4,0,0,3,2,0], # s1 can become s0, s3, or s4, but with different probabilities
-    [0,0,0,0,0,0], # s2 is terminal, and unreachable (never observed in practice)
-    [0,0,0,0,0,0], # s3 is terminal
-    [0,0,0,0,0,0], # s4 is terminal
-    [0,0,0,0,0,0], # s5 is terminal
-    ]
-    """
-    x = [[Fraction(1)] + [Fraction(0)] * (len(m)-1)]
-    m = [[Fraction(i, sum(row)) if sum(row) != 0 else Fraction(0) for i in row ] for row in m ]
-    # m = m.T
-    # print(m)
-    
-    total = [Fraction(0) * len(m)]
-    for i in range(40):
-        x = matmul_fraction(m, x)
-        # total += x
-    
-    print(x)
-    # P = m
-    # I = np.eye(len(m))
-    # print(I)
-    # PI_diff = P - I
-    # print(PI_diff)
-    # U, S, Vt = np.linalg.svd(PI_diff)
-
-    # tolerance = 1e-5
-    # null_mask = (S <= tolerance)
-    # null_space = Vt.T[:, null_mask]
-    # print(null_space)
-    # print("stable state:")
-    # print(total)
-
-
-
+def swap(i, ind, m):
+    m[i], m[ind] = m[ind], m[i]
+    for k in range(len(m)):
+        m[k][i], m[k][ind] = m[k][ind], m[k][i]
+def getim(matrix):
+    rows = len(matrix)
+    augmented = [row + [Fraction(int(i == j), 1) for i in range(rows)] for j, row in enumerate(matrix)]
+    for r in range(rows):
+        pivot = augmented[r][r]
+        if pivot == 0:
+            for k in range(r + 1, rows):
+                if augmented[k][r] != 0:
+                    augmented[r], augmented[k] = augmented[k], augmented[r]
+                    pivot = augmented[r][r]
+                    break
+        for c in range(2*rows):
+            augmented[r][c] /= pivot
+        for i in range(rows):
+            if i != r:
+                factor = augmented[i][r]
+                for c in range(2*rows):
+                    augmented[i][c] -= factor * augmented[r][c]
+    inverse_matrix = [row[rows:] for row in augmented]
+    return inverse_matrix
 def solution(m):
-    total = [[Fraction(0)]* len(m)]
-    x = [[Fraction(1)] + [Fraction(0)] * (len(m)-1)]
+    n = len(m)
+    if n==1:
+        if len(m[0]) == 1 and m[0][0] == 0:
+            return [1, 1]
     mm = [[Fraction(i, sum(row)) if sum(row) != 0 else Fraction(0) for i in row ] for row in m ]
-    len([bool(sum(elem)) for elem in m])
-    for i, row in enumerate(m):
-        # for j, elem in enumerate(row):
-        #     if elem != 0:
-        if sum(row): # if the row is non-terminal:
-            row
-    # for _ in range(len(m)):
-    #     x = matmul_fraction(x, mm)
-    #     for i in range(len(total[0])):
-    #         total[0][i] += x[0][i]
-        
-
-
-    nums = [frac.numerator for frac in total[0]]
-    denoms = [frac.denominator for frac in total[0]]
-    lcm = math.lcm(*denoms)
-    numx = list(map(lambda x: lcm//x, denoms))
-    print(total)
+    len([bool(sum(elem)) for elem in mm])
+    for i, row in enumerate(mm):
+        if sum(row): 
+            ind = i-1 
+            while i!=0 and (not sum(mm[ind])):
+                swap(i, ind, mm)
+                ind -= 1
+                i-=1
+    i = [sum(r) for r in mm].index(0)
+    mat_QR = mm[:i]
+    mat_Q, mat_R = [m[:i] for m in mat_QR], [m[i:] for m in mat_QR]
+    I_Q= [[Fraction(1) - k if i == j else Fraction(0) - k for j, k in enumerate(m)] for i, m in enumerate(mat_Q)]
+    I_Q_1 = getim(I_Q)
+    Q_R = matmul_fraction(I_Q_1, mat_R)
+    nums = [frac.numerator for frac in Q_R[0]]
+    denoms = [frac.denominator for frac in Q_R[0]]
+    lcmdenom = lcm(*denoms)
+    numx = list(map(lambda x: lcmdenom//x, denoms))
+    return [n*x for n, x in zip(nums, numx)] + [lcmdenom]
 
 
 
@@ -77,5 +72,7 @@ if __name__ == "__main__":
     testcase_m1 = [[0, 2, 1, 0, 0], [0, 0, 0, 3, 4], [0, 0, 0, 0, 0], [0, 0, 0, 0,0], [0, 0, 0, 0, 0]]
     testcase_m2 = [[0, 1, 0, 0, 0, 1], [4, 0, 0, 3, 2, 0], [0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0]]
     solution(testcase_m1)
-    #assert solution(testcase_m1) == [7, 6, 8, 21]
-     #assert solution(testcase_m2) == [0, 3, 2, 9, 14]
+    assert solution(testcase_m1) == [7, 6, 8, 21]
+    assert solution(testcase_m2) == [0, 3, 2, 9, 14]
+
+
